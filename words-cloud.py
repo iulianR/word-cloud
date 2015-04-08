@@ -6,6 +6,7 @@ import sys
 consumer_key = "8adGill0tekm7zRcBlrBWzLaM"
 consumer_secret = "2B876ONhUv6yQGbEYNlz8K2RT4MeAV2R03fgJ3mlhIVZgnjcAj"
 
+
 tweets = []
 
 
@@ -36,18 +37,28 @@ def auth():
     return tweepy.API(auth)
 
 
+def get_stopwords ():
+    stopwords = []
+    with open('stopwords.txt', 'r') as f:
+        for line in f:
+            stopwords.append(line.strip('\n'))
+
+    return stopwords
+
+
 def create_stream(api):
     myStreamListener = MyStreamListener()
     return tweepy.Stream(auth=api.auth, listener=myStreamListener)
 
 
-def get_json():
+def get_json(stopwords):
     dict1 = {}
     for e in tweets:
         words = e.split(' ')
         for word in words:
             word = word.lower()
-
+            if word in stopwords:
+                continue
             if dict1.has_key(word):
                 dict1[word] += 1
             else:
@@ -68,13 +79,14 @@ def get_json():
 
 def main(seconds):
     api = auth()
+    stopwords = get_stopwords ()
     stream = create_stream (api)
 
     stream.sample(languages=['en'], async=True)
     time.sleep(int(seconds))
     stream.disconnect()
 
-    json_text = get_json()
+    json_text = get_json(stopwords)
 
     print(json_text)
 
