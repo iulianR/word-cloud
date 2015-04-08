@@ -51,32 +51,22 @@ def create_stream(api):
 
 
 def get_json(stopwords, length):
-    dict1 = {"other": 0}
+    cloud = {"other": 0}
     for e in tweets:
         words = e.split(' ')
         for word in words:
             word = word.lower()
             if word in stopwords:
                 continue
-            if dict1.has_key(word):
-                dict1[word] += 1
+            if cloud.has_key(word):
+                cloud[word] += 1
             else:
-                if len(dict1) < int (length):
-                    dict1[word] = 0
+                if len(cloud) < int (length):
+                    cloud[word] = 0
                 else:
-                    dict1["other"] += 1
+                    cloud["other"] += 1
 
-    class Object:
-        pass
-
-    final = []
-    for k, v in dict1.items():
-        me = Object()
-        me.word = k
-        me.count = v
-        final.append(me)
-
-    return json.dumps([me.__dict__ for me in final])
+    return [{"word": word, "count": count} for word, count in cloud.items()]
 
 
 def main(seconds, length):
