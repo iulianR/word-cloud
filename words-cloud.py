@@ -6,7 +6,6 @@ import sys
 consumer_key = "8adGill0tekm7zRcBlrBWzLaM"
 consumer_secret = "2B876ONhUv6yQGbEYNlz8K2RT4MeAV2R03fgJ3mlhIVZgnjcAj"
 
-
 tweets = []
 
 
@@ -51,8 +50,8 @@ def create_stream(api):
     return tweepy.Stream(auth=api.auth, listener=myStreamListener)
 
 
-def get_json(stopwords):
-    dict1 = {}
+def get_json(stopwords, length):
+    dict1 = {"other": 0}
     for e in tweets:
         words = e.split(' ')
         for word in words:
@@ -62,7 +61,10 @@ def get_json(stopwords):
             if dict1.has_key(word):
                 dict1[word] += 1
             else:
-                dict1[word] = 0
+                if len(dict1) < int (length):
+                    dict1[word] = 0
+                else:
+                    dict1["other"] += 1
 
     class Object:
         pass
@@ -77,7 +79,7 @@ def get_json(stopwords):
     return json.dumps([me.__dict__ for me in final])
 
 
-def main(seconds):
+def main(seconds, length):
     api = auth()
     stopwords = get_stopwords ()
     stream = create_stream (api)
@@ -86,13 +88,13 @@ def main(seconds):
     time.sleep(int(seconds))
     stream.disconnect()
 
-    json_text = get_json(stopwords)
+    json_text = get_json(stopwords, length)
 
     print(json_text)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        main(sys.argv[1])
+    if len(sys.argv) > 2:
+        main(sys.argv[1], sys.argv[2])
     else:
-        print("Please specify the duration of the data stream fetch")
+        print("Please specify the command line arguments")
