@@ -1,7 +1,9 @@
+#!/usr/bin/python
 import tweepy
 import json
 import time
 import sys
+import redis
 
 consumer_key = "8adGill0tekm7zRcBlrBWzLaM"
 consumer_secret = "2B876ONhUv6yQGbEYNlz8K2RT4MeAV2R03fgJ3mlhIVZgnjcAj"
@@ -37,6 +39,7 @@ def auth():
 
 
 def get_stopwords ():
+    """ Creates the stopwords list by reading the words from the file """
     stopwords = []
     with open('stopwords.txt', 'r') as f:
         for line in f:
@@ -50,23 +53,22 @@ def create_stream(api):
     return tweepy.Stream(auth=api.auth, listener=myStreamListener)
 
 
-def get_json(stopwords, length):
-    cloud = {"other": 0}
+def get_json(r, stopwords, length):
+    r.flushdb()
+    r.hset("cloud", "other", 0)
     for e in tweets:
         words = e.split(' ')
         for word in words:
             word = word.lower()
             if word in stopwords:
                 continue
-            if cloud.has_key(word):
-                cloud[word] += 1
-            else:
-                if len(cloud) < int (length):
-                    cloud[word] = 0
-                else:
-                    cloud["other"] += 1
 
-    return [{"word": word, "count": count} for word, count in cloud.items()]
+            if r.hlen("cloud") < int (length):
+                r.hincrby("cloud", word, 1)
+            else:
+                r.hincrby("cloud", "other", 1)
+
+    return [{"word": word, "count": int (count)} for word, count in r.hgetall("cloud").items()]
 
 
 def main(seconds, length):
@@ -78,7 +80,8 @@ def main(seconds, length):
     time.sleep(int(seconds))
     stream.disconnect()
 
-    json_text = get_json(stopwords, length)
+    r = redis.StrictRedis(host='redis', port=6379, db=0)
+    json_text = get_json(r, stopwords, length)
 
     print(json_text)
 
