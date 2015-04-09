@@ -4,6 +4,10 @@ import json
 import time
 import sys
 import redis
+import operator
+
+CLOUD = "cloud"
+OTHER = "other"
 
 consumer_key = "8adGill0tekm7zRcBlrBWzLaM"
 consumer_secret = "2B876ONhUv6yQGbEYNlz8K2RT4MeAV2R03fgJ3mlhIVZgnjcAj"
@@ -49,13 +53,17 @@ def get_stopwords ():
 
 
 def create_stream(api):
+    # Create a stream using our custom listener that appends the tweets to a list
     myStreamListener = MyStreamListener()
     return tweepy.Stream(auth=api.auth, listener=myStreamListener)
 
 
 def get_json(r, stopwords, length):
+    # Just to be able to see that words get pulled every time
     r.flushdb()
-    r.hset("cloud", "other", 0)
+
+    # Other should be 0 for now
+    r.hset(CLOUD, OTHER, 0)
     for e in tweets:
         words = e.split(' ')
         for word in words:
@@ -63,24 +71,36 @@ def get_json(r, stopwords, length):
             if word in stopwords:
                 continue
 
-            if r.hlen("cloud") < int (length):
-                r.hincrby("cloud", word, 1)
+            # If we haven't reached cloud's given size and we have a new word
+            if r.hlen(CLOUD) <= int (length) or r.hexists(CLOUD, word):
+                r.hincrby(CLOUD, word, 1)
             else:
-                r.hincrby("cloud", "other", 1)
+                r.hincrby(CLOUD, OTHER, 1)
 
-    return [{"word": word, "count": int (count)} for word, count in r.hgetall("cloud").items()]
+    # Format the output as a json list of objects
+    final = [{"word": word, "count": int (count)} for word, count in r.hgetall(CLOUD).items() if word != OTHER]
+
+    # Sort by number of occurances
+    final.sort(key=operator.itemgetter('count'), reverse=True)
+
+    # Add other at the end (according to widget picture in the pdf)
+    final.append ({"word": OTHER, "count": int(r.hget(CLOUD, OTHER))})
+    return final
 
 
 def main(seconds, length):
     api = auth()
-    stopwords = get_stopwords ()
-    stream = create_stream (api)
+    stopwords = get_stopwords()
+    stream = create_stream(api)
 
     stream.sample(languages=['en'], async=True)
     time.sleep(int(seconds))
     stream.disconnect()
 
+    # Connect to redis
     r = redis.StrictRedis(host='redis', port=6379, db=0)
+
+    # Get the final json
     json_text = get_json(r, stopwords, length)
 
     print(json_text)
