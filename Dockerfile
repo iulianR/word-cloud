@@ -13,7 +13,3 @@ RUN pip install -r /tmp/requirements.txt
 # Define working directory
 WORKDIR /src
 ADD . /src
-
-# Run app
-# CMD ["python", "words-cloud.py", "3", "3"]
-# ENTRYPOINT ["words-cloud.py"]
