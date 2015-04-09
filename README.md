@@ -1,4 +1,7 @@
 ### Installation steps
+
+Note: Only do steps 3 and 4 if docker-compose fails to connect to the Docker daemon (you get an error message at step 5).
+
 #### 1. [Install docker](https://docs.docker.com/installation/)
 #### 2. [Install docker-compose](https://docs.docker.com/compose/install/)
 #### (Optional) 3. Start the Docker daemon in a separate terminal (it doesn't always work when I run it in background)
